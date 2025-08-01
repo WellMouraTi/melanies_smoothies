@@ -44,5 +44,8 @@ if time_to_insert:
     session.sql(my_insert_stmt).collect() 
     st.success('Seu Smoothie foi pedido!', icon="✅")
 
-
+# new section to display smoothiefroot nutrition information
+import requests
+smoothiefroot_response = requests.get("https://my.smoothiefroot.com/api/fruit/watermelon")
+st.text(smoothiefroot_response)
 
