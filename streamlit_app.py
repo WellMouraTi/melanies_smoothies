@@ -44,3 +44,7 @@ if ingredients_list and name_on_order.strip() != "":
         st.success('✅ Seu Smoothie foi pedido!')
 else:
     st.info("Preencha o nome do Smoothie e selecione ao menos 1 ingrediente.")
+
+import requests
+smoothiefroot_response = requests.get("https://my.smoothiefroot.com/api/fruit/watermelon")
+st.text(smoothiefroot_response.json())
