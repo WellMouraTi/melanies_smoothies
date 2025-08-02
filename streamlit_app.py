@@ -1,51 +1,46 @@
-# Import python packages
+# Importações no topo
 import streamlit as st
+import requests
 from snowflake.snowpark.functions import col
 
-# Título e instruções
+# Título e nome
 st.title(":cup_with_straw: Customize Your Smoothie! :cup_with_straw:")
-st.write("Choose the fruits you want in your custom Smoothie!")
+st.write("Escolha as frutas para seu Smoothie personalizado!")
 
-# Campo de entrada para o nome do pedido
-name_on_order = st.text_input('Name on Smoothie:')
-st.write('The name on your Smoothie will be:', name_on_order)
+name_on_order = st.text_input('Nome no pedido:')
+st.write('Nome no Smoothie:', name_on_order)
 
-# Conectar ao Snowflake
-cnx = st.connection("snowflake")  # substitua se necessário
+# Conexão com Snowflake
+cnx = st.connection("snowflake")
 session = cnx.session()
-
-# Buscar opções de frutas
 my_dataframe = session.table("smoothies.public.fruit_options").select(col('FRUIT_NAME'))
-# st.dataframe(my_dataframe, use_container_width=True)
 
-# Multiselect para escolher ingredientes
+# Seleção de ingredientes
 ingredients_list = st.multiselect(
-    'Choose up to 5 ingredients:',
+    'Escolha até 5 ingredientes:',
     my_dataframe,
     max_selections=5
 )
 
-# Só continua se o usuário preencheu o nome e escolheu ao menos 1 ingrediente
-if ingredients_list and name_on_order.strip() != "":
-    # Montar a string dos ingredientes
-    ingredients_string = ' '.join(ingredients_list)
+if ingredients_list:
+    ingredients_string = ''
+    
+    for fruit_chosen in ingredients_list:
+        ingredients_string += fruit_chosen + ' '
 
-    # Preparar o insert
-    my_insert_stmt = f"""
-        INSERT INTO smoothies.public.orders(ingredients, name_on_order)
-        VALUES ('{ingredients_string}', '{name_on_order}')
-    """
+        # Consulta ao SmoothieFroot API para cada fruta
+        smoothiefroot_response = requests.get(f"https://my.smoothiefroot.com/api/fruit/{fruit_chosen}")
+        sf_df = st.dataframe(data=smoothiefroot_response.json(), use_container_width=True)
 
-    # Botão para enviar o pedido
-    time_to_insert = st.button('Submit Order')
+# Monta a instrução INSERT
+my_insert_stmt = f"""
+    INSERT INTO smoothies.public.orders(ingredients, name_on_order)
+    VALUES ('{ingredients_string}', '{name_on_order}')
+"""
 
-    if time_to_insert:
-        session.sql(my_insert_stmt).collect()
-        st.success('✅ Seu Smoothie foi pedido!')
-else:
-    st.info("Preencha o nome do Smoothie e selecione ao menos 1 ingrediente.")
+# Botão de enviar pedido
+time_to_insert = st.button('Pedir Smoothie')
 
-import requests
-smoothiefroot_response = requests.get("https://my.smoothiefroot.com/api/fruit/watermelon")
-#st.text(smoothiefroot_response.json())
-sf_df = st.dataframe(data=smoothiefroot_response.json(), use_container_width=True)
+if time_to_insert:
+    session.sql(my_insert_stmt).collect()
+    st.success('Seu Smoothie foi pedido!', icon="✅")
